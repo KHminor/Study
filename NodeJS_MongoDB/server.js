@@ -1,9 +1,13 @@
 const express = require("express"); //위에서 작성한 라이브러리를 설치
 const app = express(); // 설치한 라이브러리로 객체를 생성해줘
 const bodyParser = require("body-parser"); // body-parser 가져오기
+// PUT, DELETE 요청 가능하게 하는 방법
+const methodOverride = require("method-override");
+app.use(methodOverride("_method"));
+
 app.use(bodyParser.urlencoded({ extended: true }));
 app.set("view engine", "ejs");
-
+app.use("/public", express.static("public"));
 var db;
 
 const MongoClient = require("mongodb").MongoClient;
@@ -49,12 +53,39 @@ app.get("/beauty", (req, res) => {
 
 app.get("/", (req, res) => {
   // res.sendFIle(__dirname + '보낼파일경로')
-  res.sendFile(__dirname + "/index.html");
+  res.render("index.ejs");
 });
 
 app.get("/write", (req, res) => {
   // res.sendFIle(__dirname + '보낼파일경로')
-  res.sendFile(__dirname + "/write.html");
+  res.render("write.ejs");
+});
+
+app.get("/edit/:id", (req, res) => {
+  db.collection("post").findOne(
+    { _id: parseInt(req.params.id) },
+    (error, data) => {
+      if (data === null) {
+        res.render("error.ejs");
+      } else {
+        res.render("edit.ejs", { data: data });
+      }
+    }
+  );
+});
+
+app.put("/edit", (req, res) => {
+  // form에 담긴 데이터를 서버에서 해당 게시글에 맞는 id를 찾아서 데이터를 수정하기.
+  // update를 할 때는 updateOne({어떤 게시글}, {수정값}, (err, data) => {})
+  //  여기서 $set 은 operator로 ~가 있으면 수정하고, 없다면 추가해주세요 라는 의미
+  console.log(req.body);
+  db.collection("post").updateOne(
+    { _id: parseInt(req.body.id) },
+    { $set: { 제목: req.body.title, 날짜: req.body.date } },
+    (err, data) => {
+      res.redirect("/list");
+    }
+  );
 });
 
 app.post("/add", (req, res) => {
@@ -101,4 +132,42 @@ app.get("/list", (req, res) => {
       console.log(data);
       res.render("list.ejs", { posts: data });
     }); // 해당 db에 있는 모든 데이터를 가져오게 됨.
+});
+
+app.delete("/delete", (req, res) => {
+  // req.body를 하게되면 ajax로 요청시 보낸 data를 받아서 확인할 수 있다.
+  // 그리고 아래처럼 req.body로 보낸 숫자 1의 데이터가 받아올때는 문자 '1'로 받아와지기에 Int로 변경 시켜주기.
+  const id = parseInt(req.body._id);
+  // req.body에 담겨온 게시물번호를 가진 글을 db에서 찾아서 삭제해주세요.
+  // deleteOne({어떤 항목을 삭제할지}, ()=>{}) --> 삭제 메서드
+  db.collection("post").deleteOne({ _id: id }, (error, data) => {
+    console.log("삭제완료");
+    // 응답코드 200을 보내주기.
+    // .send({}) 로 메시지를 함께 보내주기.
+    if (error) {
+      res.status(400).send({ message: "실패" });
+    } else {
+      res.status(200).send({ message: "성공" });
+    }
+  });
+});
+
+// /detail로 접속하면 detail.ejs를 보여주기 (URL Parameter) ==> 각 상세페이지의 서로 다른 URL
+app.get("/detail/:id", (req, res) => {
+  // :?? 를 작성하게 되면 parameter를 받아서 가변 주소를 가져오게 된다.
+  // res.render('detail.ejs', {이런 이름으로: 이런 데이터를 전송 가능})
+  // db에서 우리가 찾을 데이터의 _id에 해당하는 데이터를 가져와달라는 건데
+  //  parameter의 값을 가져오려고 할 경우 req.params.?? 를 작성하게 되면 가져올 수 있다.
+  // 그리고 위에서 확인했던것처럼 req 데이터로 날라오는 값이 모두는 잘 모르겠지만 대부분이 string type으로 날라오기에 정수화 시켜주기!!!
+  db.collection("post").findOne(
+    { _id: parseInt(req.params.id) },
+    (error, data) => {
+      if (data === null) {
+        console.log("데이터 없다.");
+        res.render("error.ejs");
+      } else {
+        res.render("detail.ejs", { data: data });
+      }
+    }
+  );
 });
