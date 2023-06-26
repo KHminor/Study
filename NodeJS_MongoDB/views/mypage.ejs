@@ -10,33 +10,20 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css"
     integrity="sha384-xOolHFLEh07PJGoPkLv1IbcEPTNtaed2xpHsD9ESMhqIYd0nLMwNLD69Npy4HI+N" crossorigin="anonymous">
   <link rel="stylesheet" href="/public/main.css">
-
   <title>NodeJS+MongoDB</title>
 </head>
 
 <body>
-
   <%- include('nav.html') %>
-  <h4 class="text-center my-5">상세 페이지</h4>
 
-  <div class="container d-flex justify-content-center align-items-center">
-    <div class="card" style="width: 100%;">
-      <div class="card-body">
-        <h5 class="card-title"><%= data._id %> 번 게시물</h5>
-        <h6 class="card-subtitle mb-2 text-body-secondary">제목: <%= data.제목 %></h6>
-        <p class="card-text">날짜: <%= data.날짜 %> </p>
-        <button class="update rounded-sm" data-id="<%= data._id %>">수정</button>
-      </div>
-    </div>
-  </div>
-  </div>
+  <h2 class="my-3 text-center my-5">마이 페이지</h2>
+  <p class="text-center"> <%= userData.id %>님 어서오세요 😊</p>
+
+
 
   <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
-  <script>
-    $('.update').click((e) => {
-      location.href = '/edit/' + e.target.dataset.id
-    })
-  </script>
+
+
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"
     integrity="sha384-Fy6S3B9q64WdZWQUiU+q4/2Lc9npb8tCaSX9FK7E8HnRr0Jz8D6OP9dO5Vg3Q9ct" crossorigin="anonymous">

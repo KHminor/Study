@@ -5,40 +5,40 @@ const bodyParser = require("body-parser"); // body-parser 가져오기
 const methodOverride = require("method-override");
 app.use(methodOverride("_method"));
 
+// 환경변수
+require("dotenv").config();
+
 app.use(bodyParser.urlencoded({ extended: true }));
 app.set("view engine", "ejs");
 app.use("/public", express.static("public"));
 var db;
 
 const MongoClient = require("mongodb").MongoClient;
-MongoClient.connect(
-  "mongodb+srv://admin:ghdals9578@cluster0.mhotj5h.mongodb.net/?retryWrites=true&w=majority",
-  (에러, client) => {
-    if (에러) return console.log(에러);
+MongoClient.connect(process.env.DB_URL, (에러, client) => {
+  if (에러) return console.log(에러);
 
-    db = client.db("todoapp"); // todoapp이라는 database에 연결하는 코드
+  db = client.db("todoapp"); // todoapp이라는 database에 연결하는 코드
 
-    // db에 내 이름과 나이를 저장하기
-    // db.collection('post').insertOne('저장할 데이터', (에러, 결과)=> {
-    //   console.log('저장완료');
-    // })
+  // db에 내 이름과 나이를 저장하기
+  // db.collection('post').insertOne('저장할 데이터', (에러, 결과)=> {
+  //   console.log('저장완료');
+  // })
 
-    // 아래 코드는 post라는 파일에 inserOne으로 저장하는데 데이터는 아래 작성한 객체형식의 데이터를 넣을거야 라는 의미
-    // 저장할 데이터는 객체형식으로 작성하기
-    // db.collection("post").insertOne(
-    //   { 이름: "admin", 나이: 10, _id: 0 },
-    //   (에러, 결과) => {
-    //     console.log("저장완료");
-    //   }
-    // );
+  // 아래 코드는 post라는 파일에 inserOne으로 저장하는데 데이터는 아래 작성한 객체형식의 데이터를 넣을거야 라는 의미
+  // 저장할 데이터는 객체형식으로 작성하기
+  // db.collection("post").insertOne(
+  //   { 이름: "admin", 나이: 10, _id: 0 },
+  //   (에러, 결과) => {
+  //     console.log("저장완료");
+  //   }
+  // );
 
-    // 콘솔에 input 태그에 작성한 값이 출력되는 것을 확인할 수 있다.
+  // 콘솔에 input 태그에 작성한 값이 출력되는 것을 확인할 수 있다.
 
-    app.listen(8080, () => {
-      console.log("listening on 8080");
-    });
-  }
-);
+  app.listen(process.env.PORT, () => {
+    console.log("listening on" + process.env.PORT);
+  });
+});
 
 // listen(서버 포트 번호, 해당 서버에 실행할 코드)
 
@@ -89,7 +89,7 @@ app.put("/edit", (req, res) => {
 });
 
 app.post("/add", (req, res) => {
-  res.send("전송완료");
+  res.redirect("/list");
   console.log(req.body.title);
   console.log(req.body.date);
   // id 값을 매기기 위해 총 데이터 개수를 가져오는 방법
@@ -170,4 +170,155 @@ app.get("/detail/:id", (req, res) => {
       }
     }
   );
+});
+
+// 설치한 라이브러리를 가져오기
+const passport = require("passport");
+const localStrategy = require("passport-local").Strategy;
+const session = require("express-session");
+
+// middleware
+// app.use() 를 사용하게 되면 () 안의 미들웨어를 사용하겠다라는 의미.
+// middleware란?
+// 우선 웹서버는 요청-응답을 해주는 것.
+// 그래서 요청-응답 중간에 실행되는 코드를 미들웨어라고 한다.
+app.use(
+  session({ secret: "비밀코드", resave: true, saveUninitialized: false })
+); // <-- secret은 세션을 만들때의 비밀번호 같은 것.
+app.use(passport.initialize());
+app.use(passport.session());
+
+app.get("/login", (req, res) => {
+  res.render("login.ejs");
+});
+
+// 기존 post 요청과는 달리 맞는지 인증 검사를 해야하기에 passport.authenticate('local') 를 추가해주기
+//  해당 코드는 local 방식으로 회원인지 인증해달라는 코드
+//  그리고 {} 를 추가하면 셋팅을 더 추가로 할 수 있게 됨.--> 그래서 현재는 로그인 실패시 /fail 페이지로 이동시켜달라는 코드
+app.post(
+  "/login",
+  passport.authenticate("local", {
+    failureRedirect: "/fail",
+  }),
+  (req, res) => {
+    // 아이디, 비번 맞으면 메인 페이지로 보내주기.
+    res.redirect("/");
+  }
+);
+
+// 로그인 유저만 mypage에 입장 가능하도록 해야하니깐 middleware 추가하기
+// 아래 isLogin 함수는 req.user 가 있는지 확인하는 middleware
+// next() 는 다음으로 진행을 의미 (통과)
+function isLogin(req, res, next) {
+  if (req.user) {
+    // <--- req.user는 로그인 후 세션이 있으면 항상 있는 데이터
+    next();
+  } else {
+    res.redirect("/login");
+  }
+}
+
+app.get("/mypage", isLogin, (req, res) => {
+  // console.log(req.user); // <--- deserializeUser() 의 결과를 받아온 db에 있는 유저의 데이터
+  res.render("mypage.ejs", { userData: req.user });
+});
+
+// 아이디와 비번을 인증하는 세부 코드의 경우엔 상세히 작성해야 함.
+//  그래서 인증하는 방법을 strategy로 작성
+passport.use(
+  new localStrategy(
+    {
+      usernameField: "id", // form 태그의 name 속성의 id 값
+      passwordField: "pw", // form 태그의 name 속성의 pw 값
+      session: true, // 로그인 후 세션을 저장할 것인지에 대한 셋팅
+      passReqToCallback: false, // 아이디/비밀번호 말고도 다른 정보로 검증을 할 것인지에 대한 셋팅
+      // 만약 passReqToCallback: true로 한다면 밑의 (id, pw, done) 에서 req를 추가해서 req.body 하면 데이터가 나온다고 한다.
+    },
+    (id, pw, done) => {
+      // done(1번째 인자: 서버에러와 같은 db 연결 불가 등, 2번째 인자: 요청을 성공했을 때 사용자 db 데이터 만약 실패의 경우 false 넣어야 함, 3번째 인자: 에러 메시지)
+      db.collection("login").findOne({ id: id }, (err, data) => {
+        if (err) return done(err);
+        if (!data)
+          // 결과가 없다면 --> db에 대항 아이디가 없다면
+          return done(null, false, { msg: "존재하지 않는 아이디 입니다." });
+        if (pw == data.pw) {
+          // pw가 암호화 되어있지 않기에 보안이 좋지 않지만 지금은 우선 이렇게 진행함.
+          // db에 아이디가 있다면, 입력한 비밀번호와 db에 있는 비번이랑 확인해보기.
+
+          // 아이디와 비번이 맞아서 로그인을 성공하면 세션 정보를 만들어줘야 함 (로그인 했는지 확인하기 위해)
+          return done(null, data); // <--- 여기 성공시의 data가 257번줄의 serializeUser((user, done))의 user 데이터에 들어가게 됨
+        } else {
+          return done(null, false, { msg: "잘못된 비밀번호 입니다." });
+        }
+      });
+    }
+  )
+);
+
+// id를 이용해서 세션을 저장시키는 코드 (로그인 성공시 발동)
+passport.serializeUser((user, done) => {
+  done(null, user.id); // 보통 id를 이용해서 세션을 저장시키기에 user.id로 세션을 만들어 주면서 쿠키도 만들어주게 됨. 그리고 쿠키안에는 로그인 했다는 정보가 들어감
+});
+
+// 나중에 마이페이지 접속시 발동할 예정 (이 세션 데이터를 가진 사람을 db에서 찾아줘) --> 즉 해당 세션 데이터를 가진 유저의 정보를 가져오기
+// 여기서 done(null, data)로 받아온 data 값은 mypage 를 get 할때 가져오는 res.user의 데이터에 담겨져 있음
+passport.deserializeUser((id, done) => {
+  // 위의 파라미터 id값은 258번줄의 user.id의 id를 가지고 있음
+  db.collection("login").findOne({ id: id }, (err, data) => {
+    done(null, data);
+  });
+});
+
+// Full Scan 방식
+// app.get("/search", (req, res) => {
+//   console.log(req.query.value); // query string은 req.query 에 담겨있음.
+//   db.collection("post")
+//     .find({ 제목: req.query.value })
+//     .toArray((err, data) => {
+//       console.log(data);
+//       res.render("search.ejs", { posts: data });
+//     });
+// });
+
+// Search Index ==> 이진 탐색
+// app.get("/search", (req, res) => {
+//   db.collection("post")
+//     .find({ $text: { $search: req.query.value } }) // <------- 만들어둔 Index 사용하기 (검색 엔진과 같이 조회)
+//     .toArray((err, data) => {
+//       console.log(data);
+//       res.render("search.ejs", { posts: data });
+//     });
+// });
+
+// 한국어 친화적인 Search Index
+app.get("/search", (req, res) => {
+  const search_Condition = [
+    {
+      $search: {
+        index: "titleSearch",
+        text: {
+          query: req.query.value,
+          path: "제목", // 제목과 날짜 둘다 찾고 싶다면 ['제목', '날짜']
+        },
+      },
+    },
+    // 추가 검색 조건
+    {
+      $sort: { _id: -1 }, // 내림차순
+      // $sort: {_id: 1} 내림차순
+    },
+    // {
+    //   $limit: 5 // 조회 게시물 제한
+    // }
+    // 그리고 기본적으로 정렬을 하지 않으면 searchScore로 검색어와의 유사도를 점수로 메겨서 그것을 기준으로 정렬하게 됨.
+    // {
+    //   $project: { 제목: 1, _id: 0, score: { $meta: "searchScore"}} // 여기서 value로 1은 조건 추가, 0은 조건 제거를 의미
+    // }
+  ];
+  db.collection("post")
+    .aggregate(search_Condition) // aggregate([{},{},{}]) 를 사용해서 배열 안의 여러개의 검색 조건을 넣을 수 있다. 예를 들어 어느 날짜, 어떤 단어, 정렬이요 등등
+    .toArray((err, data) => {
+      console.log(data);
+      res.render("search.ejs", { posts: data });
+    });
 });
