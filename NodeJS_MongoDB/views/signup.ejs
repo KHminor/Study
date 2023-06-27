@@ -17,29 +17,20 @@
 <body>
   <%- include('nav.html')%>
 
-  <% if (data === "성공") { %>
-  <script>
-    alert('회원가입 성공😏')
-  </script>
-  <% } %>
-
-  <h4 class="container mt-4"><strong>로그인 페이지</strong></h4>
+  <h4 class="container mt-4"><strong>회원가입 페이지</strong></h4>
 
   <div class="container mt-3">
-    <form action="/login" method="POST">
+    <form action="/register" method="POST">
       <div class="form-group">
         <label>Id</label>
         <input type="text" class="form-control" name="id">
       </div>
       <div class="form-group">
         <label>PW</label>
-        <input type="text" class="form-control" name="pw">
+        <input type="password" class="form-control" name="pw" style="color: black;">
       </div>
-      <button type="submit" class="btn btn-danger mt-1">Submit</button>
+      <button type="submit" class="btn btn-danger mt-1">회원가입</button>
     </form>
-    <div class="my-5">
-      <a href="/signup">회원가입</a>
-    </div>
   </div>
 
 

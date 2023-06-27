@@ -8,6 +8,9 @@ app.use(methodOverride("_method"));
 // 환경변수
 require("dotenv").config();
 
+// 암호화
+const crypto = require("crypto");
+
 app.use(bodyParser.urlencoded({ extended: true }));
 app.set("view engine", "ejs");
 app.use("/public", express.static("public"));
@@ -51,11 +54,6 @@ app.get("/beauty", (req, res) => {
   res.send("뷰티용품 쇼핑할 수 있는 페이지 입니다.");
 });
 
-app.get("/", (req, res) => {
-  // res.sendFIle(__dirname + '보낼파일경로')
-  res.render("index.ejs");
-});
-
 app.get("/write", (req, res) => {
   // res.sendFIle(__dirname + '보낼파일경로')
   res.render("write.ejs");
@@ -88,36 +86,6 @@ app.put("/edit", (req, res) => {
   );
 });
 
-app.post("/add", (req, res) => {
-  res.redirect("/list");
-  console.log(req.body.title);
-  console.log(req.body.date);
-  // id 값을 매기기 위해 총 데이터 개수를 가져오는 방법
-  //  단 예를 들어 하나의 데이터를 삭제했을 때 같은 id를 가진 새로운 데이터가 생기면 안되기에
-  //  기존의 id 값이 아닌 +1 한 id 값을 가져와야함.
-  // 위와 같은 문제를 해결하기 위해 1개의 collection을 더 만들어서 관리할 예정
-  // counter라는 collection에서 name: '게시물 개수'인 데이터를 찾아달라는 코드
-  db.collection("counter").findOne({ name: "게시물 개수" }, (error, data) => {
-    const id = data.totalPost;
-    db.collection("post").insertOne(
-      { 제목: req.body.title, 날짜: req.body.date, _id: id + 1 },
-      (에러, 결과) => {
-        // 만약 여러개를 수정하겠다면 updateMany()
-        // db.collection('counter').updateOne({어떤데이터를 수정할지}, {operator : {변경할key : 수정값}}, ()=>{})
-        // operator ==> $set = 변경, $inc = 기존값에 더해줄 값, $min = 기존값보다 적을 때만 변경, $ rename = key값 이름 변경 ...
-        // 만약 딱히 처리할게 없다면 콜백함수를 지워도 됨
-        db.collection("counter").updateOne(
-          { name: "게시물 개수" },
-          { $inc: { totalPost: 1 } },
-          () => {
-            console.log("저장완료");
-          }
-        );
-      }
-    );
-  });
-});
-
 // 과제
 // /list 로 GET 요청하면 실제 DB에 저장된 데이터들로 꾸며진 HTML 보여주기
 app.get("/list", (req, res) => {
@@ -132,24 +100,6 @@ app.get("/list", (req, res) => {
       console.log(data);
       res.render("list.ejs", { posts: data });
     }); // 해당 db에 있는 모든 데이터를 가져오게 됨.
-});
-
-app.delete("/delete", (req, res) => {
-  // req.body를 하게되면 ajax로 요청시 보낸 data를 받아서 확인할 수 있다.
-  // 그리고 아래처럼 req.body로 보낸 숫자 1의 데이터가 받아올때는 문자 '1'로 받아와지기에 Int로 변경 시켜주기.
-  const id = parseInt(req.body._id);
-  // req.body에 담겨온 게시물번호를 가진 글을 db에서 찾아서 삭제해주세요.
-  // deleteOne({어떤 항목을 삭제할지}, ()=>{}) --> 삭제 메서드
-  db.collection("post").deleteOne({ _id: id }, (error, data) => {
-    console.log("삭제완료");
-    // 응답코드 200을 보내주기.
-    // .send({}) 로 메시지를 함께 보내주기.
-    if (error) {
-      res.status(400).send({ message: "실패" });
-    } else {
-      res.status(200).send({ message: "성공" });
-    }
-  });
 });
 
 // /detail로 접속하면 detail.ejs를 보여주기 (URL Parameter) ==> 각 상세페이지의 서로 다른 URL
@@ -189,7 +139,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 app.get("/login", (req, res) => {
-  res.render("login.ejs");
+  res.render("login.ejs", { data: "" });
 });
 
 // 기존 post 요청과는 달리 맞는지 인증 검사를 해야하기에 passport.authenticate('local') 를 추가해주기
@@ -223,6 +173,11 @@ app.get("/mypage", isLogin, (req, res) => {
   res.render("mypage.ejs", { userData: req.user });
 });
 
+function checkPassword(pw, salt, savedHash) {
+  const hash = crypto.pbkdf2Sync(pw, salt, 1000, 64, "sha512").toString("hex"); // 입력된 비밀번호를 해시화
+  return hash === savedHash;
+}
+
 // 아이디와 비번을 인증하는 세부 코드의 경우엔 상세히 작성해야 함.
 //  그래서 인증하는 방법을 strategy로 작성
 passport.use(
@@ -237,11 +192,15 @@ passport.use(
     (id, pw, done) => {
       // done(1번째 인자: 서버에러와 같은 db 연결 불가 등, 2번째 인자: 요청을 성공했을 때 사용자 db 데이터 만약 실패의 경우 false 넣어야 함, 3번째 인자: 에러 메시지)
       db.collection("login").findOne({ id: id }, (err, data) => {
+        // 해당 아이디의 salt, hash 값 가져오기
+        const isPW = checkPassword(pw, data.salt, data.hash);
+
         if (err) return done(err);
-        if (!data)
+        else if (!data)
           // 결과가 없다면 --> db에 대항 아이디가 없다면
           return done(null, false, { msg: "존재하지 않는 아이디 입니다." });
-        if (pw == data.pw) {
+        else if (isPW) {
+          console.log("로그인 했다!");
           // pw가 암호화 되어있지 않기에 보안이 좋지 않지만 지금은 우선 이렇게 진행함.
           // db에 아이디가 있다면, 입력한 비밀번호와 db에 있는 비번이랑 확인해보기.
 
@@ -257,16 +216,60 @@ passport.use(
 
 // id를 이용해서 세션을 저장시키는 코드 (로그인 성공시 발동)
 passport.serializeUser((user, done) => {
-  done(null, user.id); // 보통 id를 이용해서 세션을 저장시키기에 user.id로 세션을 만들어 주면서 쿠키도 만들어주게 됨. 그리고 쿠키안에는 로그인 했다는 정보가 들어감
+  console.log(user);
+  done(null, user); // 보통 id를 이용해서 세션을 저장시키기에 user.id로 세션을 만들어 주면서 쿠키도 만들어주게 됨. 그리고 쿠키안에는 로그인 했다는 정보가 들어감
 });
 
 // 나중에 마이페이지 접속시 발동할 예정 (이 세션 데이터를 가진 사람을 db에서 찾아줘) --> 즉 해당 세션 데이터를 가진 유저의 정보를 가져오기
-// 여기서 done(null, data)로 받아온 data 값은 mypage 를 get 할때 가져오는 res.user의 데이터에 담겨져 있음
-passport.deserializeUser((id, done) => {
+// 여기서 done(null, data)로 받아온 data 값은 mypage 를 get 할때 가져오는 req.user의 데이터에 담겨져 있음
+passport.deserializeUser((userData, done) => {
   // 위의 파라미터 id값은 258번줄의 user.id의 id를 가지고 있음
-  db.collection("login").findOne({ id: id }, (err, data) => {
-    done(null, data);
+  db.collection("login").findOne({ id: userData.id }, (err, data) => {
+    done(null, userData);
   });
+});
+
+// 회원 기능이 필요하다면 passport 셋팅하는 부분이 위에 있어야한다고 함.
+app.get("/signup", (req, res) => {
+  res.render("signup.ejs");
+});
+
+function isTrueId(id) {
+  const pattern = /^[a-zA-Z0-9]+$/;
+  return pattern.test(id);
+}
+
+function hashPassword(pw) {
+  const salt = crypto.randomBytes(16).toString("hex"); // 임의의 salt 생성
+  const hash = crypto.pbkdf2Sync(pw, salt, 1000, 64, "sha512").toString("hex"); // 입력한 비밀번호와 salt를 가지고 비밀번호를 해싱
+
+  return {
+    salt: salt,
+    hash: hash,
+  };
+}
+
+app.post("/register", (req, res) => {
+  db.collection("login")
+    .find({ id: req.body.id })
+    .toArray((err, data) => {
+      console.log(data);
+      if (data.length === 0) {
+        // 해당 데이터가 없다면 정규식 검사로 알파벳 또는 숫자만 들어가 있는지 확인
+        if (isTrueId(req.body.id)) {
+          // 확인되고 만약 잘 작성되었다면 비밀번호 암호화 후 DB에 저장하기 <----- 비밀번호는 저장하지 않고 salt와 hash 값을 저장해줘서 로그인시 매칭할때 사용하기
+          const { salt, hash } = hashPassword(req.body.pw);
+          db.collection("login").insertOne(
+            { id: req.body.id, salt: salt, hash: hash },
+            (err, data) => {
+              if (!err) {
+                res.render("login.ejs", { data: "성공" });
+              }
+            }
+          );
+        }
+      }
+    });
 });
 
 // Full Scan 방식
@@ -322,3 +325,71 @@ app.get("/search", (req, res) => {
       res.render("search.ejs", { posts: data });
     });
 });
+
+app.post("/add", (req, res) => {
+  res.redirect("/list");
+  // id 값을 매기기 위해 총 데이터 개수를 가져오는 방법
+  //  단 예를 들어 하나의 데이터를 삭제했을 때 같은 id를 가진 새로운 데이터가 생기면 안되기에
+  //  기존의 id 값이 아닌 +1 한 id 값을 가져와야함.
+  // 위와 같은 문제를 해결하기 위해 1개의 collection을 더 만들어서 관리할 예정
+  // counter라는 collection에서 name: '게시물 개수'인 데이터를 찾아달라는 코드
+  db.collection("counter").findOne({ name: "게시물 개수" }, (error, data) => {
+    const id = data.totalPost;
+    const sendData = {
+      제목: req.body.title,
+      날짜: req.body.date,
+      _id: id + 1,
+      user: req.user._id,
+    }; // 로그인한 유저의 정보를 가져오려고 할 경우 req.user를 입력하면 된다.
+
+    db.collection("post").insertOne(sendData, (에러, 결과) => {
+      // 만약 여러개를 수정하겠다면 updateMany()
+      // db.collection('counter').updateOne({어떤데이터를 수정할지}, {operator : {변경할key : 수정값}}, ()=>{})
+      // operator ==> $set = 변경, $inc = 기존값에 더해줄 값, $min = 기존값보다 적을 때만 변경, $ rename = key값 이름 변경 ...
+      // 만약 딱히 처리할게 없다면 콜백함수를 지워도 됨
+      db.collection("counter").updateOne(
+        { name: "게시물 개수" },
+        { $inc: { totalPost: 1 } },
+        () => {
+          console.log("저장완료");
+        }
+      );
+    });
+  });
+});
+
+app.get("/", (req, res) => {
+  // res.sendFIle(__dirname + '보낼파일경로')
+  console.log("req.user", req.user.id);
+  res.render("index.ejs");
+});
+
+app.delete("/delete", (req, res) => {
+  // req.body를 하게되면 ajax로 요청시 보낸 data를 받아서 확인할 수 있다.
+  // 그리고 아래처럼 req.body로 보낸 숫자 1의 데이터가 받아올때는 문자 '1'로 받아와지기에 Int로 변경 시켜주기.
+  const id = parseInt(req.body._id);
+  // req.body에 담겨온 게시물번호를 가진 글을 db에서 찾아서 삭제해주세요.
+  console.log("req.user._id", req.user._id);
+  const deleteData = { _id: id, user: req.user._id };
+
+  // deleteOne({어떤 항목을 삭제할지}, ()=>{}) --> 삭제 메서드
+  db.collection("post").deleteOne(deleteData, (error, data) => {
+    // 응답코드 200을 보내주기.
+    // .send({}) 로 메시지를 함께 보내주기.
+    console.log("data.deletedCount", data.deletedCount);
+
+    if (error) {
+      res.status(400).send({ message: "실패" });
+    } else if (data.deletedCount !== 1) {
+      res.status(400).send({ message: "실패" });
+    } else {
+      res.status(200).send({ message: "성공" });
+    }
+  });
+});
+
+// shop.js 라우터 첨부하기
+// app.use 는 미들웨어를 사용하겠다 라는 의미 (다시 한번 기억하기!)
+// 현재는 /shop으로 접속하면 shop.js 라우터를 이용하겠다 라는 의미가 됨.
+app.use("/shop", require("./routes/shop"));
+app.use("/board/sub", require("./routes/board"));
