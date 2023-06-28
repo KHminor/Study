@@ -32,6 +32,7 @@
         <h6 class="card-subtitle mb-2 text-body-secondary">할일 제목: <%=  posts[i].제목 %> </h6>
         <p class="card-text">할일 마감날짜: <%= posts[i].날짜 %></p>
         <button class="detail rounded-sm" data-id="<%= posts[i]._id %>">상세</button>
+        <button class="chat bg-success text-white rounded-sm" data-id="<%= posts[i]._id %>">댓글</button>
         <button class="delete bg-danger text-white rounded-sm" data-id="<%= posts[i]._id %>">삭제</button>
       </div>
     </div>
@@ -40,6 +41,21 @@
 
   <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
 
+  <!-- chat -->
+  <script>
+    $('.chat').click((e) => {
+      $.ajax({
+        method: 'POST',
+        url: '/chat',
+        data: {
+          _id: e.target.dataset.id
+        }
+      }).done((r) => {
+        console.log(r);
+      })
+    })
+  </script>
+  <!-- search -->
   <script>
     $('#search').click((e) => {
       // window.location.replace('/search?이름=값')
@@ -47,12 +63,13 @@
       window.location.replace('/search?value=' + search_data)
     })
   </script>
-
+  <!-- detail -->
   <script>
     $('.detail').click((e) => {
       location.href = '/detail/' + e.target.dataset.id
     })
   </script>
+  <!-- delete -->
   <script>
     $('.delete').click((e) => {
       // e.target = 지금 클릭한 것, this = 지금 이벤트 동작하는 곳

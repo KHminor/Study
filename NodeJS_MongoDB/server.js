@@ -272,6 +272,12 @@ app.post("/register", (req, res) => {
     });
 });
 
+// shop.js 라우터 첨부하기
+// app.use 는 미들웨어를 사용하겠다 라는 의미 (다시 한번 기억하기!)
+// 현재는 /shop으로 접속하면 shop.js 라우터를 이용하겠다 라는 의미가 됨.
+app.use("/shop", require("./routes/shop"));
+app.use("/board/sub", require("./routes/board"));
+
 // Full Scan 방식
 // app.get("/search", (req, res) => {
 //   console.log(req.query.value); // query string은 req.query 에 담겨있음.
@@ -360,7 +366,6 @@ app.post("/add", (req, res) => {
 
 app.get("/", (req, res) => {
   // res.sendFIle(__dirname + '보낼파일경로')
-  console.log("req.user", req.user.id);
   res.render("index.ejs");
 });
 
@@ -388,8 +393,85 @@ app.delete("/delete", (req, res) => {
   });
 });
 
-// shop.js 라우터 첨부하기
-// app.use 는 미들웨어를 사용하겠다 라는 의미 (다시 한번 기억하기!)
-// 현재는 /shop으로 접속하면 shop.js 라우터를 이용하겠다 라는 의미가 됨.
-app.use("/shop", require("./routes/shop"));
-app.use("/board/sub", require("./routes/board"));
+// multer 사용법
+const multer = require("multer");
+// 이미지를 어디에 저장할 것인지 인데
+//  diskStorage는 폴더 안에 저장해달라는 것.
+//  memoryStorage는 렘에 저장해달라는 것(휘발성).
+const storage = multer.diskStorage({
+  destination: (req, file, cd) => {
+    cd(null, "./public/images"); // 저장할 파일 경로
+  },
+  filename: (req, file, cd) => {
+    // 저장한 파일의 파일명 설정 --> originalname은 파일명 그대로
+    cd(null, file.originalname);
+  },
+});
+
+const path = require("path");
+
+// 필터랑 제한을 주고 싶을 땐 multer({}) 안에 작성해야한다.
+const upload = multer({
+  storage: storage,
+  // 파일 필터 걸기
+  fileFilter: function (req, file, callback) {
+    var ext = path.extname(file.originalname);
+    if (ext !== ".png" && ext !== ".jpg" && ext !== ".jpeg") {
+      return callback(new Error("PNG, JPG만 업로드하세요"));
+    }
+    callback(null, true);
+  },
+  limits: {
+    fileSize: 1024 * 1024,
+  },
+});
+
+app.get("/upload", (req, res) => {
+  res.render("upload.ejs");
+});
+
+// 미들웨어처럼 upload 사용하기.
+// app.post('/upload', single('input태그의 name속성'), (req, res)=> {
+//    만약 파일 여러개를 업로드하고 싶다면 upload.single이 아니라 upload.array('name속성', 최대 개수)로 변경해주고
+//    upload 해주는 input도 여러개로 넣을 수 있게 multiple 속성을 추가로 해줘야함. --> 이게 그냥 클릭하면 안되고 컨트롤 누르고 해야 적용됨.
+app.post("/upload", upload.array("upload", 2), (req, res) => {
+  res.redirect("/");
+});
+
+// 업로드한 이미지 보여주기.
+
+app.get("/images/:fileName", (req, res) => {
+  // __dirname 는 현재 파일의 경로를 의미
+  // res.sendFile( __dirname + 'public/images' + 이미지이름)
+  res.sendFile(__dirname + "/public/images/" + req.params.fileName);
+});
+
+app.get("/chat", isLogin, (req, res) => {
+  res.render("chat.ejs");
+});
+
+app.post("/chat", isLogin, (req, res) => {
+  console.log("게시글(채팅방 주인)", req.body._id);
+  console.log("로그인 유저", req.user._id);
+  db.collection("post").findOne(
+    { _id: parseInt(req.body._id) },
+    (err, data) => {
+      const chatRoomData = {
+        member: [req.user._id, data._id],
+        date: new Date(),
+        title: data["제목"],
+      };
+      db.collection("chatroom").findOne(
+        { member: [req.user._id, data._id] },
+        (err, data) => {
+          if (data === null) {
+            db.collection("chatroom").insertOne(chatRoomData, (err, data2) => {
+              console.log(data2);
+            });
+          }
+          res.redirect("/chat");
+        }
+      );
+    }
+  );
+});
