@@ -22,12 +22,16 @@
   <div class="container mt-3">
     <form action="/register" method="POST">
       <div class="form-group">
+        <label>닉네임</label>
+        <input type="text" class="form-control" name="nick">
+      </div>
+      <div class="form-group">
         <label>Id</label>
         <input type="text" class="form-control" name="id">
       </div>
       <div class="form-group">
         <label>PW</label>
-        <input type="password" class="form-control" name="pw" style="color: black;">
+        <input type="password" class="form-control" name="pw">
       </div>
       <button type="submit" class="btn btn-danger mt-1">회원가입</button>
     </form>

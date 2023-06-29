@@ -3,6 +3,7 @@ const app = express(); // 설치한 라이브러리로 객체를 생성해줘
 const bodyParser = require("body-parser"); // body-parser 가져오기
 // PUT, DELETE 요청 가능하게 하는 방법
 const methodOverride = require("method-override");
+const { ObjectID } = require("mongodb");
 app.use(methodOverride("_method"));
 
 // 환경변수
@@ -97,7 +98,6 @@ app.get("/list", (req, res) => {
   db.collection("post")
     .find()
     .toArray((error, data) => {
-      console.log(data);
       res.render("list.ejs", { posts: data });
     }); // 해당 db에 있는 모든 데이터를 가져오게 됨.
 });
@@ -253,14 +253,18 @@ app.post("/register", (req, res) => {
   db.collection("login")
     .find({ id: req.body.id })
     .toArray((err, data) => {
-      console.log(data);
       if (data.length === 0) {
         // 해당 데이터가 없다면 정규식 검사로 알파벳 또는 숫자만 들어가 있는지 확인
         if (isTrueId(req.body.id)) {
           // 확인되고 만약 잘 작성되었다면 비밀번호 암호화 후 DB에 저장하기 <----- 비밀번호는 저장하지 않고 salt와 hash 값을 저장해줘서 로그인시 매칭할때 사용하기
           const { salt, hash } = hashPassword(req.body.pw);
           db.collection("login").insertOne(
-            { id: req.body.id, salt: salt, hash: hash },
+            {
+              id: req.body.id,
+              salt: salt,
+              hash: hash,
+              nickname: req.body.nick,
+            },
             (err, data) => {
               if (!err) {
                 res.render("login.ejs", { data: "성공" });
@@ -346,6 +350,7 @@ app.post("/add", (req, res) => {
       날짜: req.body.date,
       _id: id + 1,
       user: req.user._id,
+      nickname: req.user.nickname,
     }; // 로그인한 유저의 정보를 가져오려고 할 경우 req.user를 입력하면 된다.
 
     db.collection("post").insertOne(sendData, (에러, 결과) => {
@@ -447,31 +452,55 @@ app.get("/images/:fileName", (req, res) => {
 });
 
 app.get("/chat", isLogin, (req, res) => {
-  res.render("chat.ejs");
+  console.log("req.user._id: ", req.user._id);
+  db.collection("chatroom")
+    .find({ member: ObjectID(req.user._id) })
+    .toArray()
+    .then((data) => {
+      console.log(data);
+      res.render("chat.ejs", { data: data });
+    });
 });
 
 app.post("/chat", isLogin, (req, res) => {
-  console.log("게시글(채팅방 주인)", req.body._id);
-  console.log("로그인 유저", req.user._id);
-  db.collection("post").findOne(
-    { _id: parseInt(req.body._id) },
+  const chatRoomData = {
+    member: [ObjectID(req.user._id), ObjectID(req.body.user)],
+    date: new Date(),
+    title: req.body.title,
+    nickname: [req.user.nickname, req.body.nickname],
+  };
+  db.collection("chatroom").findOne(
+    { member: [ObjectID(req.user._id), ObjectID(req.body.user)] },
     (err, data) => {
-      const chatRoomData = {
-        member: [req.user._id, data._id],
-        date: new Date(),
-        title: data["제목"],
-      };
-      db.collection("chatroom").findOne(
-        { member: [req.user._id, data._id] },
-        (err, data) => {
-          if (data === null) {
-            db.collection("chatroom").insertOne(chatRoomData, (err, data2) => {
-              console.log(data2);
-            });
-          }
-          res.redirect("/chat");
-        }
-      );
+      if (data === null) {
+        db.collection("chatroom")
+          .insertOne(chatRoomData)
+          .then(() => {
+            console.log("생성");
+            res.redirect("/chat"); // /chat 페이지로 리다이렉션
+          })
+          .catch((error) => {
+            console.log("에러:", error);
+            res.redirect("/error"); // 실패 시 에러 페이지로 리다이렉션
+          });
+      } else {
+        res.redirect("/chat"); // 이미 존재하는 경우에도 /chat 페이지로 리다이렉션
+      }
     }
   );
+});
+
+app.post("/msg", isLogin, (req, res) => {
+  const saveMsg = {
+    parent: req.body.parent,
+    content: req.body.content,
+    userId: req.user._id,
+    date: new Date(),
+  };
+
+  db.collection("msg")
+    .insertOne(saveMsg)
+    .then((r) => {
+      console.log("성공");
+    });
 });

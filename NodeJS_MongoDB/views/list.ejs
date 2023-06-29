@@ -32,7 +32,8 @@
         <h6 class="card-subtitle mb-2 text-body-secondary">할일 제목: <%=  posts[i].제목 %> </h6>
         <p class="card-text">할일 마감날짜: <%= posts[i].날짜 %></p>
         <button class="detail rounded-sm" data-id="<%= posts[i]._id %>">상세</button>
-        <button class="chat bg-success text-white rounded-sm" data-id="<%= posts[i]._id %>">댓글</button>
+        <button class="chat bg-success text-white rounded-sm" data-user="<%= posts[i].user %>"
+          data-title="<%= posts[i].제목 %>" data-nickname="<%= posts[i].nickname %>">댓글</button>
         <button class="delete bg-danger text-white rounded-sm" data-id="<%= posts[i]._id %>">삭제</button>
       </div>
     </div>
@@ -44,14 +45,12 @@
   <!-- chat -->
   <script>
     $('.chat').click((e) => {
-      $.ajax({
-        method: 'POST',
-        url: '/chat',
-        data: {
-          _id: e.target.dataset.id
-        }
-      }).done((r) => {
-        console.log(r);
+      $.post('/chat', {
+        user: e.target.dataset.user,
+        title: e.target.dataset.title,
+        nickname: e.target.dataset.nickname
+      }).done(() => {
+        location.href = '/chat'
       })
     })
   </script>
