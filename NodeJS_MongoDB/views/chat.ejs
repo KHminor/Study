@@ -51,7 +51,7 @@
 
     <div class="row">
       <div class="col-3">
-        <ul class="list-group chat-list">
+        <ul class="list-group chat-list" data-id="<%= userId %>">
           <% for (let i = 0; i < data.length; i++ ) { %>
           <li class="list-group-item" data-id="<%= data[i]._id %>">
             <h6> <%= data[i].title %> </h6>
@@ -92,8 +92,9 @@
     let clickData = ''
     let eventSource
 
+    const userId = $('.chat-list').data('id')
+
     $('.list-group-item').click((e) => {
-      console.log(e.currentTarget);
       clickData = e.currentTarget.dataset.id;
 
       // SSE
@@ -111,12 +112,17 @@
       // <------- 'test'는 아까 server.js 에서 작명헀던 것 -> event: 보낼데이터 이름 + \n
       eventSource.addEventListener('test', (
         e) => {
-        console.log(JSON.parse(e.data)); // <--- 서버에서 보낸 데이터
+        // console.log(JSON.parse(e.data)); // <--- 서버에서 보낸 데이터
         JSON.parse(e.data).map((chatData) => {
-          $('.chat-content').append("<li><span class='chat-box'>" + chatData.content + "</span></li>")
+          if (chatData.userId === userId) {
+            $('.chat-content').append("<li><span class='chat-box mine'>" + chatData.content +
+              "</span></li>")
+          } else {
+            $('.chat-content').append("<li><span class='chat-box'>" + chatData.content + "</span></li>")
+          }
+
         })
       })
-
 
     })
 

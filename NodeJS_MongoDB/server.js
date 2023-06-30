@@ -457,7 +457,7 @@ app.get("/chat", isLogin, (req, res) => {
     .find({ member: ObjectID(req.user._id) })
     .toArray()
     .then((data) => {
-      res.render("chat.ejs", { data: data });
+      res.render("chat.ejs", { data: data, userId: req.user._id });
     });
 });
 
@@ -534,7 +534,7 @@ app.get("/msg/:id", isLogin, (req, res) => {
       res.write("event: test\n");
       // 다만 서버에서 실시간 전송시 문자자료만 전송이 가능하다.
       // 그래서 toArray()로 배열 상태로 들어오기에 JSON 형식으로 변경 해주기.
-      res.write("data: " + JSON.stringify(r) + "\n\n ");
+      res.write("data: " + JSON.stringify(r) + "\n\n");
     });
 
   // 내가 원하는 document만 감시하고 싶으면 match 안에 특정 값을 찾을 수 있는 값을 넣어주기
