@@ -457,7 +457,6 @@ app.get("/chat", isLogin, (req, res) => {
     .find({ member: ObjectID(req.user._id) })
     .toArray()
     .then((data) => {
-      console.log(data);
       res.render("chat.ejs", { data: data });
     });
 });
@@ -503,4 +502,50 @@ app.post("/msg", isLogin, (req, res) => {
     .then((r) => {
       console.log("성공");
     });
+});
+
+// SSE
+//  아래와 같이 작성하면 /sse 로 GET 요청하면 실시간으로 채널이 오픈됨
+app.get("/msg/:id", isLogin, (req, res) => {
+  // Header를 아래와 같이 수정해달라는 코드
+  res.writeHead(200, {
+    Connection: "keep-alive",
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+  });
+
+  // 일반적으로 GET, POST 요청은 1번 요청시 1번 응답을 하게 되는데
+  //  위와 같이 코드를 작성하게 되면 여러번 응답이 가능하게 됨
+
+  // 유저에게 데이터 전송은 event: 보낼데이터 이름 + \n
+  // 유저에게 데이터 전송은 data: 보낼데이터 + \n\n  <--- 개행을 두번 작성하는게 안정적이라고 한다.
+
+  // 지금은 메세지들을 한번 찾아서 보내고 끝임.
+  // 그리고 DB는 수동적이기에 DB가 업데이트 될 때마다 유저에게 데이터를 전송해 달라는 것을 잘 못함.
+  //  그래서 MongoDB Change Stream 을 사용하게 되면 변경시 전송이 가능하게 된다.
+  //  Change Stream 설정하게 되면, DB 변동시 -> 서버에게 알려줌 -> 유저에게 보낼 수 있다.
+
+  db.collection("msg")
+    // params로 채팅방 id를 가져오는 이유는 get 요청이기에
+    // 두가지 방법인 params와 query string 둘 중 params를 사용했음.
+    .find({ parent: req.params.id })
+    .toArray()
+    .then((r) => {
+      res.write("event: test\n");
+      // 다만 서버에서 실시간 전송시 문자자료만 전송이 가능하다.
+      // 그래서 toArray()로 배열 상태로 들어오기에 JSON 형식으로 변경 해주기.
+      res.write("data: " + JSON.stringify(r) + "\n\n ");
+    });
+
+  // 내가 원하는 document만 감시하고 싶으면 match 안에 특정 값을 찾을 수 있는 값을 넣어주기
+  // 여기서 key 값으로 문자로 특정 key 값 앞에 fullDocument. 를 붙여줘야 한다.
+  const pipeline = [{ $match: { "fullDocument.parent": req.params.id } }];
+  const collection = db.collection("msg");
+  const changeStream = collection.watch(pipeline); // watch 하게 되면 실시간으로 감시하게 됨
+  changeStream.on("change", (r) => {
+    // console.log(r.fullDocument); // 전체 메시지 확인 방법
+    //  아래에서 [] 안에 넣어주는 이유는 chat.ejs 에서 배열로 다루기 때문
+    res.write("event: test\n");
+    res.write(`data: ${JSON.stringify([r.fullDocument])}\n\n`);
+  });
 });

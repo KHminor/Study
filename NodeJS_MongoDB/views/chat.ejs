@@ -64,9 +64,6 @@
       <div class="col-9 p-0">
         <div class="chat-room">
           <ul class="list-group chat-content">
-            <li><span class="chat-box">채팅방1 내용</span></li>
-            <li><span class="chat-box">채팅방1 내용</span></li>
-            <li><span class="chat-box mine">채팅방1 내용</span></li>
           </ul>
           <div class="input-group">
             <input class="form-control" id="chat-input">
@@ -85,12 +82,42 @@
 
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
+  <!-- SSE -->
+  <script>
+
+  </script>
+
 
   <script>
     let clickData = ''
+    let eventSource
+
     $('.list-group-item').click((e) => {
       console.log(e.currentTarget);
       clickData = e.currentTarget.dataset.id;
+
+      // SSE
+
+      // 해당 변수에 뭔가 있다면 즉 참가하고 있는 채팅방이 있다면 그 채팅을 닫아달라는 코드
+      if (eventSource != undefined) {
+        eventSource.close()
+        $('.chat-content').html('') // 내부 비워주기
+      }
+
+      // 유저의 데이터 수신은 아래와 같다.
+      // new EventSource('/경로')  <--- 특별한 get 요청 방법
+      eventSource = new EventSource('/msg/' + clickData)
+      // eventSourece로 요청후 데이터를 받고자 한다면
+      // <------- 'test'는 아까 server.js 에서 작명헀던 것 -> event: 보낼데이터 이름 + \n
+      eventSource.addEventListener('test', (
+        e) => {
+        console.log(JSON.parse(e.data)); // <--- 서버에서 보낸 데이터
+        JSON.parse(e.data).map((chatData) => {
+          $('.chat-content').append("<li><span class='chat-box'>" + chatData.content + "</span></li>")
+        })
+      })
+
+
     })
 
 
