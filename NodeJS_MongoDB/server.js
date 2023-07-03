@@ -1,6 +1,12 @@
 const express = require("express"); //위에서 작성한 라이브러리를 설치
 const app = express(); // 설치한 라이브러리로 객체를 생성해줘
 const bodyParser = require("body-parser"); // body-parser 가져오기
+
+// socket.io 셋팅
+const http = require("http").createServer(app);
+const { Server } = require("socket.io");
+const io = new Server(http);
+
 // PUT, DELETE 요청 가능하게 하는 방법
 const methodOverride = require("method-override");
 const { ObjectID } = require("mongodb");
@@ -39,7 +45,7 @@ MongoClient.connect(process.env.DB_URL, (에러, client) => {
 
   // 콘솔에 input 태그에 작성한 값이 출력되는 것을 확인할 수 있다.
 
-  app.listen(process.env.PORT, () => {
+  http.listen(process.env.PORT, () => {
     console.log("listening on" + process.env.PORT);
   });
 });
@@ -547,5 +553,38 @@ app.get("/msg/:id", isLogin, (req, res) => {
     //  아래에서 [] 안에 넣어주는 이유는 chat.ejs 에서 배열로 다루기 때문
     res.write("event: test\n");
     res.write(`data: ${JSON.stringify([r.fullDocument])}\n\n`);
+  });
+});
+
+app.get("/socket", (req, res) => {
+  res.render("socket.ejs");
+});
+
+// 누가 웹소켓에 접속하면 내부 코드를 실행해달라는 코드
+io.on("connection", (socket) => {
+  console.log("접속됨.");
+
+  // // 채팅방 개설하는 방법
+  // socket.join("room1"); // <-- 개설을 하고 유저 또한 함께 참가할 수 있게 해줌
+
+  socket.on("joinroom", (data) => {
+    socket.join(data);
+  });
+
+  socket.on("room1_send", (data) => {
+    io.to("room1").emit("broadcast", data);
+  });
+
+  // 유저가 데이터를 보내면 서버가 수신할 수 있도록 코드 작성하기
+  socket.on("user-send", (data) => {
+    // data 가 유저가 보낸 데이터
+    // console.log("유저가 보낸거: ", data);
+
+    // 모든 유저에게 보낼 데이터
+    io.emit("broadcast", data);
+    // 특정 유저에게 보낼 데이터
+    //  socket을 날린 사용자에게 데이터를 전송하게 됨
+    // console.log(socket.id);  // <--- 요청을 한 사용자, 유저 구분이 가능
+    // io.to(socket.id).emit("broadcast", data);
   });
 });
