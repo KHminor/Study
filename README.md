@@ -1,4 +1,4 @@
-# ✨ Study Tech Stack List ✨
+# ✨ 학습한 기술 스택 목록 ✨
 
-- Flutter
 - NodeJS_MongoDB
+- Flutter
