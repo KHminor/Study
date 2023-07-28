@@ -12,22 +12,57 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
 
     return MaterialApp(
-      //보통 Widget은 파스칼 케이스를 사용
-      //그래서 글자를 넣고 싶다면 Text('글 내용')을 작성하면 된다.
-      //그래서 이미지를 넣고 싶다면 Image.asset('경로')를 작성하면 된다. <-- 프로젝트 폴더 안에 위치해야 하고, pubspec.yaml에 등록을 해줘야 함.
-      //그래서 아이콘를 넣고 싶다면 Icon(Icons.아이콘이름)을 작성하면 된다.
-      //그래서 박스를 넣고 싶다면 Container(스타일 속성 추가하기) or SizedBox()를 작성하면 된다.
-      // Flutter의 사이즈 단위는 LP라고 해서 현실에서 쓰는 cm, inch 단위랑 유사.
-      // 1cm = 38LP
-      // 50LP == 1.2cm
-
-      // home: Text('안녕'),
-      // home: Icon(Icons.shop),
-      // home: Image.asset('JJangu.jpg'),
-
-      //Center()는 내 하위 위젯의 기준점을 중앙으로 설정해주는 메서드
-      home: Center(
-        child: Container(width: 50, height: 50, color: Colors.blue),
+      home: Scaffold(
+        appBar: AppBar(
+          // title은 왼쪽 제목, leading은 왼쪽에 넣을 아이콘을 의미
+          // actions는 우측에 넣을 아이콘들
+          backgroundColor: Colors.white,
+          title: Text('금호동3가', style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900)),
+          actions: [
+            Row(
+              children: [Icon(Icons.search), SizedBox(width: 20), Icon(Icons.menu), SizedBox(width: 20), Icon(Icons.notifications_none_sharp)],
+            )
+          ],
+          actionsIconTheme: IconThemeData(color: Colors.black, size: 40),
+          leading: Icon(Icons.access_time),
+        ),
+        body: Container(
+          child: Row(
+            children: [
+              Expanded(
+                flex: 3,
+                child: Container(
+                  height: 300,
+                  alignment: Alignment.topCenter,
+                  child: Image.asset('JJangu.jpg'),
+                  margin: EdgeInsets.fromLTRB(15, 30, 15, 0),
+                ),
+              ),
+              Expanded(
+                flex: 7,
+                child: Container(
+                  height: 300,
+                  margin: EdgeInsets.fromLTRB(15, 30, 15, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('캐논 DSLR 100D (단렌즈, 충전기 16기가SD 포함)', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w700)),
+                      Text('성동구 행당동 끌올 10분 전', style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w700)),
+                      Text('210.000원', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Icon(Icons.favorite_border, color: Colors.grey),
+                          Text('4', style: TextStyle(fontSize: 20, color: Colors.grey, fontWeight: FontWeight.w300),)
+                        ],
+                      )
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
