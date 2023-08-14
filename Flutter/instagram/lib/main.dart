@@ -9,11 +9,17 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 // shared_preferences
 import 'package:shared_preferences/shared_preferences.dart';
+// Local notification
+import 'notification.dart';
+
 
 void main() {
   runApp(
-    ChangeNotifierProvider(
-      create: (c) => Store1(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (c)=>Store1()),
+        ChangeNotifierProvider(create: (c)=>Store2())
+      ],
       child: MaterialApp(
         theme: style.theme,
         initialRoute: '/',
@@ -29,7 +35,7 @@ void main() {
 
 class MyApp extends StatefulWidget {
   MyApp({super.key});
-  
+
   @override
   State<MyApp> createState() => _MyAppState();
 }
@@ -63,6 +69,7 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+    initNotification(context);
     getData();
   }
 
@@ -86,6 +93,12 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        child: Text('+'),
+        onPressed: (){
+          showNotification();
+        },
+      ),
         appBar: AppBar(
           title: Text('Instagram'),
           actions: [
@@ -269,10 +282,26 @@ class _UploadState extends State<Upload> {
 }
 
 class Store1 extends ChangeNotifier {
-  var list = [{'name': 'kim sky', 'follow': '팔로우'}, {'name': 'park water', 'follow': '팔로우'}];
-  clickFollow(idx){
-    if (list[idx]['follow'] == '팔로우') {list[idx]['follow'] = '팔로잉';}
-    else {list[idx]['follow'] = '팔로우';}
+  var follow = 0;
+  var check = false;
+  isClick() async{
+    if (check == false) {
+      follow++;
+      check = true;
+    } else {
+      follow--;
+      check = false;
+    }
+    notifyListeners();
+  }
+}
+
+class Store2 extends ChangeNotifier{
+  var getImage = [];
+  getData() async{
+    var result = await http.get(Uri.parse('https://codingapple1.github.io/app/profile.json'));
+    getImage = await jsonDecode(result.body);
+    print(getImage);
     notifyListeners();
   }
 }
@@ -285,26 +314,46 @@ class Profile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-          title: Text('Instagram')
+          title: Text('Instagram'),
         ),
-      body: ListView.builder(
-        itemCount: context.watch<Store1>().list.length,
-        itemBuilder: (context, idx) {
-          return Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Icon(Icons.person_pin),
-              Text(context.watch<Store1>().list[idx]['name'].toString()),
-              TextButton(
-                onPressed: (){
-                  context.read<Store1>().clickFollow(idx);
-                },
-                child: Text(context.watch<Store1>().list[idx]['follow'].toString())
-              ),
-            ],
-          );
-        },
+      body: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: ProfileHeader(),
+          ),
+          SliverGrid(
+            delegate: SliverChildBuilderDelegate(
+              (c,i)=> Image.network(context.watch<Store2>().getImage[i]),
+              childCount: context.watch<Store2>().getImage.length
+            ),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 1),
+          )
+        ],
       )
+    );
+  }
+}
+
+class ProfileHeader extends StatelessWidget {
+  const ProfileHeader({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row (
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        CircleAvatar(
+          radius: 30,
+          backgroundColor: Colors.grey,
+        ),
+        Text("팔로워 ${context.watch<Store1>().follow}"),
+        ElevatedButton(onPressed: (){
+          context.read<Store1>().isClick();
+        }, child: Text(context.watch<Store1>().check == false?'팔로우':'팔로워')),
+        ElevatedButton(onPressed: ()async{
+          await context.read<Store2>().getData();
+        }, child: Text('사진가져오기')),
+      ],
     );
   }
 }
