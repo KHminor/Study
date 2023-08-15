@@ -11,9 +11,19 @@ import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 // Local notification
 import 'notification.dart';
+// firebase
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+// shop
+import './shop.dart';
 
+void main() async{
 
-void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   runApp(
     MultiProvider(
       providers: [
@@ -96,7 +106,7 @@ class _MyAppState extends State<MyApp> {
       floatingActionButton: FloatingActionButton(
         child: Text('+'),
         onPressed: (){
-          showNotification();
+          showNotification2();
         },
       ),
         appBar: AppBar(
@@ -120,7 +130,7 @@ class _MyAppState extends State<MyApp> {
             )
           ],
         ),
-      body: [Home(homeData:homeData, appendData:appendData),Text('shop')][tab],
+      body: [Home(homeData:homeData, appendData:appendData),Shop()][tab],
       bottomNavigationBar: BottomNavigationBar(
         onTap: (i){
           changeTab(i);

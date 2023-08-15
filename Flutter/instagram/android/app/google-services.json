@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "641958548853",
+    "project_id": "fluttergram-80763",
+    "storage_bucket": "fluttergram-80763.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:641958548853:android:a1da311df422ef8062ef3c",
+        "android_client_info": {
+          "package_name": "com.toygram.instagram"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "641958548853-5sfpujjcv79s6eoankielu91uc2lmkis.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCmE6vqWQpOkZl4QoTAL1lwdWZzHXScGa8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "641958548853-5sfpujjcv79s6eoankielu91uc2lmkis.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "641958548853-9ph1jo05ecqfrsiuurpcbvko444900or.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.toygram.instagram",
+                "app_store_id": "123456789"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
