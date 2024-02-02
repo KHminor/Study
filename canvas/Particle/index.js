@@ -14,18 +14,80 @@ const ctx = canvas.getContext("2d");
 const dpr = window.devicePixelRatio;
 // =====================================
 
-const canvasWidth = innerWidth;
-const canvasheight = innerHeight;
+let canvasWidth;
+let canvasheight;
+let particles;
 
-canvas.style.width = canvasWidth + "px";
-canvas.style.height = canvasheight + "px";
-// 위와 같이 canvas를 css를 활용하여 강제로 키웠기에 비율이 망가지기에
-// 아래와 같이 canvas 자체 크기 또한 함께 변경해주기
-canvas.width = canvasWidth * dpr;
-canvas.height = canvasheight * dpr;
+function init() {
+  canvasWidth = innerWidth;
+  canvasheight = innerHeight;
 
-// 서로 다른 기기에 따른 배율 적용 (선명해짐)
-ctx.scale(dpr, dpr);
+  canvas.style.width = canvasWidth + "px";
+  canvas.style.height = canvasheight + "px";
+  // 위와 같이 canvas를 css를 활용하여 강제로 키웠기에 비율이 망가지기에
+  // 아래와 같이 canvas 자체 크기 또한 함께 변경해주기
+  canvas.width = canvasWidth * dpr;
+  canvas.height = canvasheight * dpr;
+
+  // 서로 다른 기기에 따른 배율 적용 (선명해짐)
+  ctx.scale(dpr, dpr);
+
+  particles = [];
+
+  const TOTAL = canvasWidth / 10;
+
+  for (let i = 0; i < TOTAL; i++) {
+    const x = randomNumBetween(0, canvasWidth);
+    const y = randomNumBetween(0, canvasheight);
+    const radius = randomNumBetween(50, 100);
+    const vy = randomNumBetween(1, 5);
+    const particle = new Particle(x, y, radius, vy);
+    particles.push(particle);
+  }
+}
+
+// dat GUI 사용하기
+const feGaussianBlue = document.querySelector("feGaussianBlur");
+const feColorMatrix = document.querySelector("feColorMatrix");
+
+const controls = new (function () {
+  this.blurValue = 40;
+  this.alphaChannel = 100;
+  this.alphaOffset = -23;
+  this.acc = 1.03;
+})();
+
+let gui = new dat.GUI();
+
+const f1 = gui.addFolder("Gooey Effect");
+f1.open();
+
+f1.add(controls, "blurValue", 0, 100).onChange((value) => {
+  feGaussianBlue.setAttribute("stdDeviation", value);
+});
+
+f1.add(controls, "alphaChannel", 1, 200).onChange((value) => {
+  feColorMatrix.setAttribute(
+    "values",
+    `1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 ${value} ${controls.alphaOffset}`
+  );
+});
+
+f1.add(controls, "alphaOffset", -40, 40).onChange((value) => {
+  feColorMatrix.setAttribute(
+    "values",
+    `1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 ${controls.alphaChannel} ${value}`
+  );
+});
+
+const f2 = gui.addFolder("Particle Property");
+f2.open();
+
+f2.add(controls, "acc", 1, 1.5, 0.01).onChange((value) => {
+  particles.forEach((particle) => {
+    particle.acc = value;
+  });
+});
 
 // 그래서 canvas의 css의 크기와 자체 크기를 공통으로 해줘야 작업을 할 때
 // 편하기에 공통 변수로 동시에 적용하는게 편하다.
@@ -57,8 +119,10 @@ class Particle {
     this.y = y;
     this.radius = radius;
     this.vy = vy;
+    this.acc = 1.02;
   }
   update() {
+    this.vy *= this.acc;
     this.y += this.vy;
   }
 
@@ -71,22 +135,9 @@ class Particle {
   }
 }
 
-const TOTAL = 20;
-
 const randomNumBetween = (min, max) => {
   return Math.random() * (max - min + 1) + min;
 };
-
-let particles = [];
-
-for (let i = 0; i < TOTAL; i++) {
-  const x = randomNumBetween(0, canvasWidth);
-  const y = randomNumBetween(0, canvasheight);
-  const radius = randomNumBetween(50, 100);
-  const vy = randomNumBetween(1, 5);
-  const particle = new Particle(x, y, radius, vy);
-  particles.push(particle);
-}
 
 let interval = 1000 / 60; // 60fps
 let now, delta;
@@ -122,4 +173,11 @@ function animate() {
   then = now - (delta % interval);
 }
 
-animate();
+window.addEventListener("load", () => {
+  init();
+  animate();
+});
+
+window.addEventListener("resize", () => {
+  init();
+});
