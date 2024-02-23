@@ -11,6 +11,10 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addInterceptor(new LoginCheckInterceptor())
                 .order(1)
                 .addPathPatterns("/**")
-                .excludePathPatterns("/user/**", "/css/**", "/*.ico", "/error", "/swagger-ui.html", "/swagger-ui/**", "/v2/api-docs", "/v2/api-docs/**");
+                .excludePathPatterns("/swagger-resources/**")
+                .excludePathPatterns("/swagger-ui.html")
+                .excludePathPatterns("/v2/api-docs")
+                .excludePathPatterns("/webjars/**") // 애플리케이션의 다른 부분에서 해당 경로에 접근 시 인터셉터 안되게 처리.
+                .excludePathPatterns("/user/login");
     }
 }

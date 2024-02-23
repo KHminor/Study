@@ -5,6 +5,8 @@ import com.server.login.domain.user.dto.SignupReqDto;
 import com.server.login.domain.user.dto.UserResDto;
 import com.server.login.domain.user.entity.UserEntity;
 import com.server.login.domain.user.repository.UserRepository;
+import com.server.login.exception.CustomException;
+import com.server.login.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -36,6 +38,9 @@ public class UserService {
     // 유저조회
     @Transactional
     public UserResDto search(String account) {
+        if (getUserAccount(account) == null) {
+            throw new CustomException(ErrorCode.USER_NOT_FOUND);
+        }
         UserEntity user = userRepository.findByAccount(account);
         return UserResDto.fromEntity(user);
     }
@@ -70,5 +75,10 @@ public class UserService {
         System.out.println(session);
         if (session == null) return "세션 없다🎮";
         else return "세션 있다😉";
+    }
+
+
+    public UserEntity getUserAccount(String account) {
+        return userRepository.findByAccount(account);
     }
 }

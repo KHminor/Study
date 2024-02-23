@@ -1,6 +1,7 @@
 package com.server.login.domain.user.controller;
 
 
+import com.server.login.common.code.dto.ResultDto;
 import com.server.login.domain.user.dto.LoginReqDto;
 import com.server.login.domain.user.dto.SignupReqDto;
 import com.server.login.domain.user.dto.UserResDto;
@@ -36,30 +37,18 @@ public class UserController {
         System.out.println("조회 요청 시작");
         UserResDto user = userService.search(account);
 
-        // 로그인 성공 시 세션에 사용자 정보 저장
-        HttpSession session = request.getSession();
-        session.setAttribute("loginUser", user);
-        System.out.println(session);
-
-        // 세션 ID를 클라이언트에게 응답
-        HttpHeaders responseHeaders = new HttpHeaders();
-        responseHeaders.set("sessionId", session.getId());
-        System.out.println(responseHeaders);
-        System.out.println("조회 요청 끝");
-
         return ResponseEntity.ok()
-                .headers(responseHeaders)
                 .body(user);
     }
 
     @PostMapping("/login")
     @ApiOperation(value = "로그인", notes = "")
-    public ResponseEntity<UserResDto> login(@RequestBody LoginReqDto loginReqDto) {
+    public ResponseEntity<ResultDto<UserResDto>> login(@RequestBody LoginReqDto loginReqDto) {
         System.out.println("로그인 요청 시작");
         UserResDto user = userService.login(loginReqDto);
 
         return ResponseEntity.ok()
-                .body(user);
+                .body(ResultDto.of(user));
     }
 
     @GetMapping("/check")
