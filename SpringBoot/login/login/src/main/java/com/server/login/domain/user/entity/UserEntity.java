@@ -8,7 +8,6 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 import javax.persistence.*;
-
 @Entity
 @Getter
 @NoArgsConstructor
@@ -34,3 +33,4 @@ public class UserEntity {
     private String nickname = BASIC_NICKNAME;
 
 }
+

@@ -1,6 +1,10 @@
 server:
   address: localhost
   port: 8080
+  servlet:
+    session:
+      timeout: 120
+      tracking-modes: cookie
 
 spring:
   mvc:
@@ -10,7 +14,7 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3306/login?serverTimezone=Asia/Seoul&zeroDateTimeBehavior=convertToNull
     username: root
-    password: ghdals9578
+    password: ghdals9578!
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:

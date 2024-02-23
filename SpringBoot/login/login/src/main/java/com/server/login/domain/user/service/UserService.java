@@ -10,6 +10,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
 import java.util.List;
 
 @Service
@@ -17,6 +19,7 @@ import java.util.List;
 public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final HttpServletRequest request;
 
     // 회원가입
     @Transactional
@@ -24,7 +27,6 @@ public class UserService {
         UserEntity user = UserEntity.builder()
                 .account(signupReqDto.getAccount())
                 .password(passwordEncoder.encode(signupReqDto.getPassword()))
-                .account(signupReqDto.getAccount())
                 .build();
         userRepository.save(user);
 
@@ -48,13 +50,25 @@ public class UserService {
 
         // userRepository에서 아이디로 사용자를 조회합니다.
         UserEntity user = userRepository.findByAccount(account);
-
+        if (user == null) throw new RuntimeException("다시 확인해보세요!");
         // DB에서 가져온 사용자의 암호화된 비밀번호와 입력받은 비밀번호를 비교합니다.
         if (!passwordEncoder.matches(password, user.getPassword())) {
             throw new RuntimeException("다시 확인해보세요!");
+        } else {
+            HttpSession session = request.getSession(); // 현재 요청과 관련된 세션을 가져오거나 생성하는 메서드
+            session.setAttribute("loginUser", user); // loginUser라는 이름으로 user 객체를 세션에 저장하여 사용자와 관련된 정보 및 식별이 가능.
         }
 
         // 로그인 성공 시 사용자 정보를 반환합니다.
         return UserResDto.fromEntity(user);
+    }
+
+    @Transactional
+    public String check() {
+        System.out.println("서비스");
+        HttpSession session = request.getSession(false);
+        System.out.println(session);
+        if (session == null) return "세션 없다🎮";
+        else return "세션 있다😉";
     }
 }
