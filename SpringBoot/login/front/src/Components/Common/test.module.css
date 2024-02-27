@@ -1,0 +1,13 @@
+@keyframes scroll {
+  0% {
+    height: 0rem;
+  }
+  100% {
+    height: 16rem;
+  }
+}
+
+.myScroll {
+  animation: scroll 0.5s backwards;
+  /* transition: max-height 0.5s ease; 슬라이드 효과 설정 */
+}
