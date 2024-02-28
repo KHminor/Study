@@ -1,0 +1,15 @@
+@keyframes sideMenu {
+  from {
+    width: 0vw;
+  }
+
+  to {
+    width: 15vw;
+  }
+}
+
+.sideMenu {
+  animation: sideMenu 0.2s backwards;
+  transition: all 0.2s;
+  overflow: hidden;
+}
