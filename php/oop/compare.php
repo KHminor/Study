@@ -8,10 +8,11 @@
   var_dump(is_dir("data.txt"));
   echo nl2br("\n");
   
+  // 파일 저장
+  file_put_contents("data.txt", rand(1, 100));
+  
   // 파일의 내용 읽기
   var_dump(file_get_contents("data.txt"));
   echo nl2br("\n");
 
-  // 파일 저장
-  file_put_contents("data.txt", rand(1, 100));
 ?>
